@@ -6,7 +6,7 @@
 #include "memlayout.h"
 #include "spinlock.h"
 #include "proc.h"
-
+#include "sysinfo.h"
 uint64
 sys_exit(void)
 {
@@ -94,4 +94,32 @@ sys_uptime(void)
   xticks = ticks;
   release(&tickslock);
   return xticks;
+}
+//Add a sys_trace() function in kernel/sysproc.c
+uint64
+sys_trace(void)
+{
+    int mask;
+
+    // 要检索 trace() 的参数，用 syscall.c 里的函数来检查
+    // 例子参考 kernel/sysproc.c
+    // 为什么要检查参数？xv6-handout-ch4.4 有说明
+    if(argint(0, &mask) < 0)// 检查 a0 里用户传入的参数，保存到变量 mask
+		return -1;
+    myproc()->tmask = mask;// 保存到 trapframe
+    return 0;
+}
+
+uint64
+sys_sysinfo(void)
+{
+	uint64 uptr;
+	struct sysinfo info;
+  	struct proc *p = myproc();
+
+	if(argaddr(0, &uptr) < 0)    return -1;// 获取用户传入的指针
+	info.freemem = freenum();
+	info.nproc = procnum();
+	if(copyout(p->pagetable, uptr, (char*)&info, sizeof(info)) < 0)    return -1;
+	return 0;
 }
